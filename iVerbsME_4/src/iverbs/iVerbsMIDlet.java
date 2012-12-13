@@ -994,6 +994,7 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
                         g.drawString(path, x, y, style);
                         
                         y+=font.getHeight();
+                        start = end;
                     }
                 }
                 
