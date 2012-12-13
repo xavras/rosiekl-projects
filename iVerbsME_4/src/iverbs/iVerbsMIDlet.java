@@ -859,13 +859,19 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
         int numDone, numRight, numWrong, numCurrent;
         
         protected void paint(Graphics g) {
-            g.setFont(Font.getFont(fontFace, Font.STYLE_PLAIN, fontSize));
+            Font font_text = Font.getFont(fontFace, Font.STYLE_PLAIN, fontSize);
+            //g.setFont(Font.getFont(fontFace, Font.STYLE_PLAIN, fontSize));
             updateStrings();//because of order changing
             g.setColor(255, 255, 255);
+            int color = 0x000000;
             g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(0, 0, 0);
-            g.drawString(string1, 5, 5, Graphics.TOP | Graphics.LEFT);
-            if(string2 != null) g.drawString(string2, 5, (int)(getHeight()*0.4+5), Graphics.TOP | Graphics.LEFT);
+            //g.setColor(0, 0, 0);
+            //g.drawString(string1, 5, 5, Graphics.TOP | Graphics.LEFT);
+            drawString(g, string1, 5, 5, getWidth(), (int)(getHeight()*0.4),
+                    Graphics.TOP | Graphics.LEFT, font_text, color);
+            //g.drawString(string2, 5, (int)(getHeight()*0.4+5), Graphics.TOP | Graphics.LEFT);
+            if(string2 != null) drawString(g, string1, 5, (int)(getHeight()*0.4+5), getWidth(), (int)(getHeight()*0.8),
+                    Graphics.TOP | Graphics.LEFT, font_text, color);
             String stats = "";
             stats+=engine.getRightListSize()+"/";
             stats+=engine.getWrongListSize()+"/";
@@ -933,51 +939,67 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
             }
         }
         
-        /*private void drawString(Graphics g, String text, 
-                int left, int up, int right, int down, //box to draw inside text
+        private void drawString(Graphics g, String text, 
+                int left, int up, int right, int down, //box to draw text inside 
                 int style, Font font, int color)
         {
             String bufor;
-            int start = 0, end = 0, bend = 0;
+            int start = 0, end = 0, tmp_end = 0;
             int x = left, y = up;
             char[] breakers = {' ', ',', '.', '/', '\\', ';',};
             int maxWidth = right - left;
             
-            for(;;)
+            g.setFont(font);
+            g.setColor(color);
+                    
+            for(;;)//Y
             {
-                end = stringFirstOf(text, breakers, start);
-                if(end == -1)//koniec pliku
+                if(y+font.getHeight() > down)
                 {
-                    end = text.length()-1;
+                    break;
                 }
-                bufor = text.substring(start, end);
-
-                int width = font.stringWidth(bufor);
-                if(width <= maxWidth)//jeszcze nie wypisuje 
-                    bend = end;
-                else//już wypisuje (nie zmieści się)
+                
+                for(;;)
                 {
-                    if(start == bend)//za długie słowo, trza skrócić
+                    if(end == text.length()-1)//koniec pliku
                     {
-                        bend = 
-                    }
-                    int fontH = font.getHeight();
-                    bufor = text.substring(start, bend);
-                    g.setFont(font);
-                    g.setColor(color);
-                    if((y+fontH) < down)//zmieści się
-                    {
-                        g.drawString(bufor, x, y, style);
-                        y += fontH;
-                        start = bend;
-                    }
-                    else
-                    {
+                        bufor = text.substring(start, end);
+                        g.drawString(path, x, y, style);
                         break;
                     }
+                        
+                    tmp_end = stringFirstOf(text, breakers, start);
+                    if(tmp_end == -1)//koniec pliku
+                    {
+                        tmp_end = text.length()-1;
+                    }
+                    //mamy info o wyrazie
+                    
+                    bufor = text.substring(start, tmp_end);
+                    int width = font.stringWidth(bufor);//dlugosc do sprawdzenia
+                    
+                    if(width < maxWidth)//zmiesci sie
+                    {
+                        end = tmp_end;
+                    }
+                    else//nie zmiesci sie
+                    {
+                        if(start == end)//jedno slowo jest dluzsze
+                        {
+                            end = divideString(bufor, font, maxWidth);
+                        }
+                        
+                        //slowo sie nie zmiesci, rysujemy
+                        bufor = text.substring(start, end);
+                        g.drawString(path, x, y, style);
+                        
+                        y+=font.getHeight();
+                    }
                 }
+                
+                if(end == text.length()-1) break;
             }
-        }*/
+        }
         
         private int stringFirstOf(String where, char[] what, int offset)
         {
@@ -991,6 +1013,19 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
             }
             
             return pos;
+        }
+        
+        private int divideString(String word, Font font, int maxWidth)
+        {
+            int end = 0;
+            
+            for(int i=0; i<word.length(); i++)
+            {
+                if(font.substringWidth(word, 0, i+1) < maxWidth) end = i+1;
+                else break;
+            }
+            
+            return end;
         }
 
     }
