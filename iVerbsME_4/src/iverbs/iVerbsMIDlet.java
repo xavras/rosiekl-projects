@@ -870,7 +870,7 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
             drawString(g, string1, 5, 5, getWidth(), (int)(getHeight()*0.4),
                     Graphics.TOP | Graphics.LEFT, font_text, color);
             //g.drawString(string2, 5, (int)(getHeight()*0.4+5), Graphics.TOP | Graphics.LEFT);
-            if(string2 != null) drawString(g, string1, 5, (int)(getHeight()*0.4+5), getWidth(), (int)(getHeight()*0.8),
+            if(string2 != null) drawString(g, string2, 5, (int)(getHeight()*0.4+5), getWidth(), (int)(getHeight()*0.8),
                     Graphics.TOP | Graphics.LEFT, font_text, color);
             String stats = "";
             stats+=engine.getRightListSize()+"/";
@@ -939,7 +939,7 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
             }
         }
         
-        private void drawString(Graphics g, String text, 
+        /*private void drawString(Graphics g, String text, 
                 int left, int up, int right, int down, //box to draw text inside 
                 int style, Font font, int color)
         {
@@ -961,19 +961,20 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
                 
                 for(;;)
                 {
-                    if(end == text.length()-1)//koniec pliku
+                    if(end >= text.length()-1)//koniec pliku
                     {
                         bufor = text.substring(start, end);
-                        g.drawString(path, x, y, style);
+                        g.drawString(bufor, x, y, style);
                         break;
                     }
                         
-                    tmp_end = stringFirstOf(text, breakers, start);
+                    tmp_end = stringFirstOf(text, breakers, end);
                     if(tmp_end == -1)//koniec pliku
                     {
                         tmp_end = text.length()-1;
                     }
                     //mamy info o wyrazie
+                    tmp_end++;//bierzemy też ten podziałek
                     
                     bufor = text.substring(start, tmp_end);
                     int width = font.stringWidth(bufor);//dlugosc do sprawdzenia
@@ -991,19 +992,55 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
                         
                         //slowo sie nie zmiesci, rysujemy
                         bufor = text.substring(start, end);
-                        g.drawString(path, x, y, style);
+                        g.drawString(bufor, x, y, style);
                         
                         y+=font.getHeight();
                         start = end;
                     }
                 }
                 
-                if(end == text.length()-1) break;
+                if(end >= text.length()-1) break;
+            }
+        }*/
+        
+        private void drawString(Graphics g, String text, 
+                int left, int top, int right, int down, //box to draw text inside 
+                int style, Font font, int color)
+        {
+            int start = 0;
+            int end = 0;
+            int maxWidth = right - left;
+            int y = top;
+            g.setFont(font);
+            g.setColor(color);
+
+            for(;;)
+            {           
+                if(y+font.getHeight() > down)
+                {
+                    break;
+                }
+                
+                if(end == text.length()-1)
+                {
+                    g.drawString(text.substring(start), left, y, style);
+                    break;
+                }
+            
+                if(font.substringWidth(text, start, end-start+1) > maxWidth)
+                {
+                    g.drawString(text.substring(start, end), left, y, style);
+                    start = end;
+                    y+=font.getHeight();
+                }
+                
+                end++;
             }
         }
         
         private int stringFirstOf(String where, char[] what, int offset)
         {
+            if(where.length() >= offset) return -1;
             int pos = -1;
             for(int i=0; i<what.length; i++)
             {
