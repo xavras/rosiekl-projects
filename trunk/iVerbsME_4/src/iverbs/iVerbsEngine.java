@@ -41,7 +41,7 @@ public class iVerbsEngine /** @version 1.3 */
             for(int chars = BUFSIZE; chars == BUFSIZE;)
             {
                 chars = is.read(bufor, 0, BUFSIZE);
-                str += bytesToStringUnicode(bufor, chars);
+                str += new String(bufor, "UTF-16LE");
             }
             
         }
@@ -134,16 +134,6 @@ public class iVerbsEngine /** @version 1.3 */
         wrongList.removeAllElements();
         rightList.removeAllElements();
         doneList.removeAllElements();
-    }
-    
-    private String bytesToStringUnicode(byte[] bytes, int size)
-    {
-        String text = "";
-        for(int i=0; i<size; i+=2)
-        {
-            text += (char)((bytes[i+1]*256)+bytes[i]);
-        }
-        return text;
     }
     
     public int getCurrentListSize()

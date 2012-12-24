@@ -219,6 +219,47 @@
             <include name="*.SIS"/>
         </patternset>
     </target>
+    <!--savaje-init-->
+    <target name="savaje-pre-init" if="cdc-platform.trigger">
+        <condition property="savaje-platform.trigger">
+            <equals arg1="savaje" arg2="${platform.type}" casesensitive="false"/>
+        </condition>
+    </target>
+    <target name="savaje-init" depends="savaje-pre-init" if="savaje-platform.trigger">
+        <property name="savaje.application.uid" value="TBD"/>
+        <condition property="savaje.bundle.base.invalid" value="true">
+            <or>
+                <equals arg1="${savaje.bundle.base}" arg2="" trim="true"/>
+                <contains string="${savaje.bundle.base}" substring="$${savaje.bundle.base"/>
+            </or>
+        </condition>
+        <condition property="savaje.unsupported.main" value="true">
+            <or>
+                <equals arg1="${main.class.applet}" arg2="true"/>
+            </or>
+        </condition>
+        <condition property="savaje.icon.invalid" value="true">
+            <or>
+                <isset property="no.application.uid"/>
+                <contains string="${savaje.application.icon}" substring="$${"/>
+                <equals arg1="${savaje.application.icon}" arg2="" trim="true"/>
+            </or>
+        </condition>
+        <property name="jnlp.dist" value="${build.dir}/jnlp/bundle.jnlp"/>
+        <property name="deployment.dir" location="${dist.dir}"/>
+        <patternset id="deployment.patternset">
+            <include name="bundle.jnlp"/>
+            <include name="bundle.policy"/>
+            <include name="lib/*"/>
+        </patternset>
+    </target>
+    <!--sjmc-init-->
+    <target name="sjmc-pre-init" if="cdc-platform.trigger">
+        <condition property="sjmc-platform.trigger">
+            <equals arg1="sjmc" arg2="${platform.type}" casesensitive="false"/>
+        </condition>
+    </target>
+    <target name="sjmc-init" depends="sjmc-pre-init" if="sjmc-platform.trigger"/>
     <!--ojec-init-->
     <target name="ojec-pre-init" if="cdc-platform.trigger">
         <condition property="ojec-platform.trigger">
@@ -253,22 +294,10 @@
             <include name="${dist.jar}"/>
         </patternset>
     </target>
-    <!--nsicom-init-->
-    <target name="nsicom-pre-init" if="cdc-platform.trigger">
-        <condition property="nsicom-platform.trigger">
-            <equals arg1="nsicom" arg2="${platform.type}" casesensitive="false"/>
-        </condition>
-    </target>
-    <target name="nsicom-init" depends="nsicom-pre-init" if="nsicom-platform.trigger">
-        <property name="deployment.dir" location="${dist.dir}"/>
-        <patternset id="deployment.patternset">
-            <include name="${dist.jar}"/>
-        </patternset>
-    </target>
     <!--init-->
     <target name="pre-init"/>
     <target name="post-init"/>
-    <target name="init" depends="pre-init,load-properties,basic-init,cldc-init,cdc-init,semc-init,ojec-init,cdc-hi-init,nokiaS80-init,nsicom-init,post-init"/>
+    <target name="init" depends="pre-init,load-properties,basic-init,cldc-init,cdc-init,semc-init,savaje-init,sjmc-init,ojec-init,cdc-hi-init,nokiaS80-init,post-init"/>
     <!--conditional clean-->
     <target name="conditional-clean-init">
         <uptodate property="no.clean.before.build" targetfile="${build.dir}/.timestamp">
@@ -582,14 +611,6 @@
             <fileset dir="${buildsystem.baton}"/>
         </jar>
     </target>
-    <!--nsicom-create-manifest-->
-    <target name="nsicom-create-manifest" if="nsicom-platform.trigger">
-        <jar jarfile="${dist.dir}/${dist.jar}" compress="${jar.compress}" update="true">
-            <manifest>
-                <attribute name="Main-Class" value="${main.class}"/>
-            </manifest>
-        </jar>
-    </target>
     <!--do-jar-no-manifest-->
     <target name="do-jar-no-manifest" unless="manifest.available">
         <dirname file="${dist.dir}/${dist.jar}" property="dist.jar.dir"/>
@@ -605,10 +626,40 @@
     <target name="sign-jar" if="sign.jar.trigger">
         <signjar jar="${dist.dir}/${dist.jar}" alias="${sign.alias}" keystore="${sign.keystore}" storepass="${sign.keystore.password}" keypass="${sign.alias.password}"/>
     </target>
+    <!--savaje-build-jnlp-->
+    <target name="savaje-prepare-icon" if="savaje-platform.trigger" unless="savaje.icon.invalid">
+        <pathconvert property="savaje.application.icon.name" pathsep=" ">
+            <path path="${savaje.application.icon}"/>
+            <chainedmapper>
+                <flattenmapper/>
+                <globmapper from="*" to="*"/>
+            </chainedmapper>
+        </pathconvert>
+        <mkdir dir="${dist.dir}/lib"/>
+        <copy tofile="${dist.dir}/lib/${savaje.application.icon.name}" file="${savaje.application.icon}" overwrite="true" failonerror="false"/>
+    </target>
+    <target name="savaje-build-jnlp" depends="savaje-prepare-icon" if="savaje-platform.trigger">
+        <mkdir dir="${build.dir}/jnlp/"/>
+        <taskdef resource="org/netbeans/modules/j2me/cdc/project/savaje/defs.properties">
+            <classpath>
+                <pathelement path="${libs.savaje-ant-utils.classpath}"/>
+            </classpath>
+        </taskdef>
+        <jnlp dir="${build.dir}/jnlp/" file="bundle.jnlp" codebase="WTK_AGUI" distjar="lib/${dist.jar.name}" applicationicon="lib/${savaje.application.icon.name}" smallicon="${savaje.application.icon.small}" focusedicon="${savaje.application.icon.focused}" applicationtitle="${application.name}" applicationvendor="${application.vendor}" applicationDescription="${application.description}" applicationArgs="${application.args}" mainClass="${main.class}" debug="${savaje.bundle.debug}" debugport="${savaje.bundle.debug.port}">
+            <fileset dir="${dist.dir}/lib"/>
+        </jnlp>
+        <policy file="${build.dir}/jnlp/bundle.policy" codebase="WTK_AGUI"/>
+        <copy tofile="${dist.dir}/lib/classes.jar" file="${dist.dir}/${dist.jar}" overwrite="true"/>
+        <copy todir="${dist.dir}" file="${build.dir}/jnlp/bundle.jnlp" overwrite="true"/>
+        <copy tofile="${dist.dir}/bundle.policy" file="${build.dir}/jnlp/bundle.policy" overwrite="true"/>
+        <copy todir="${dist.dir}/lib" overwrite="true" failonerror="false">
+            <fileset dir="${resources.dir}"/>
+        </copy>
+    </target>
     <!--jar-->
     <target name="pre-jar"/>
     <target name="post-jar"/>
-    <target name="jar" depends="preverify,pre-jar,set-password,create-jad,do-extra-libs,nokiaS80-create-manifest,jad-jsr211-properties,semc-build-j9,do-jar,nsicom-create-manifest,do-jar-no-manifest,update-jad,sign-jar,post-jar" description="Build jar and application descriptor."/>
+    <target name="jar" depends="preverify,pre-jar,set-password,create-jad,do-extra-libs,nokiaS80-create-manifest,jad-jsr211-properties,semc-build-j9,do-jar,do-jar-no-manifest,update-jad,sign-jar,savaje-build-jnlp,post-jar" description="Build jar and application descriptor."/>
     <!--override-jad-->
     <target name="override-jad" if="override.jarurl.trigger">
         <property name="deployment.jarurl" value="${dist.jar}"/>
@@ -763,6 +814,23 @@
     </target>
     <!--semc-run-->
     <target name="semc-run" depends="semc-icon-assembly,semc-ppro-emulator,semc-do-run" if="semc-platform.trigger"/>
+    <!--savaje-run-->
+    <target name="savaje-run" if="savaje-platform.trigger">
+        <sunEmulatorExec home="${platform.home}" mainclass="${main.class}" args="${application.args}" jvmargs="${run.cmd.options}" device="${platform.device}" profile="${platform.profile}" xlet="${main.class.xlet}" applet="${main.class.applet}">
+            <fileset dir="${dist.dir}">
+                <exclude name="javadoc/**"/>
+            </fileset>
+        </sunEmulatorExec>
+    </target>
+    <!--sjmc-run-->
+    <target name="sjmc-run" if="sjmc-platform.trigger">
+        <taskdef name="sjmcEmulatorExec" classname="org.netbeans.modules.j2me.cdc.project.sjmc.SJMCToolkitEmulatorExecTask" classpath="${libs.sjmc-ant-utils.classpath}"/>
+        <sjmcEmulatorExec home="${platform.home}" mainclass="${main.class}" args="${application.args}" jvmargs="${run.cmd.options}" device="${platform.device}" profile="${platform.profile}" xlet="${main.class.xlet}" applet="${main.class.applet}">
+            <fileset dir="${dist.dir}">
+                <exclude name="javadoc/**"/>
+            </fileset>
+        </sjmcEmulatorExec>
+    </target>
     <!--ojec-run-->
     <target name="ojec-run" if="ojec-platform.trigger">
         <taskdef name="ojecEmulatorExec" classname="org.netbeans.modules.j2me.cdc.project.ojec.OJECToolkitEmulatorExecTask" classpath="${libs.ojec-ant-utils.classpath}"/>
@@ -782,14 +850,6 @@
                 <exclude name="javadoc/**"/>
             </fileset>
         </nokiaexec>
-    </target>
-    <!--nsicom-run-->
-    <target name="nsicom-run" if="nsicom-platform.trigger">
-        <nsicomExecDeploy home="${platform.home}" mainclass="${main.class}" args="${application.args}" jvmargs="${run.jvmargs}" device="${platform.device}" profile="${platform.profile}" xlet="${main.class.xlet}" applet="${main.class.applet}" verbose="${nsicom.application.runverbose}" hostip="${nsicom.application.monitorhost}" runondevice="${nsicom.application.runremote}" remotevmlocation="${nsicom.remotevm.location}" remoteDataLocation="${nsicom.remoteapp.location}">
-            <fileset dir="${dist.dir}">
-                <exclude name="javadoc/**"/>
-            </fileset>
-        </nsicomExecDeploy>
     </target>
     <!--cdc-hi-run-->
     <target name="-pre-cdc-hi-run" if="cdc-hi-platform.trigger"/>
@@ -827,8 +887,8 @@
     </target>
     <!--run-->
     <target name="pre-run"/>
-    <target name="run" depends="jar,pre-run,open-netmon,cldc-run,semc-run,ojec-run,nokiaS80-run,nsicom-run,cdc-hi-run,open-profiler" description="Run MIDlet suite."/>
-    <target name="run-no-build" depends="init,pre-run,open-netmon,cldc-run,semc-run,ojec-run,nokiaS80-run,nsicom-run,cdc-hi-run,open-profiler" description="Quick Run already built MIDlet suite."/>
+    <target name="run" depends="jar,pre-run,open-netmon,cldc-run,semc-run,savaje-run,sjmc-run,ojec-run,nokiaS80-run,cdc-hi-run,open-profiler" description="Run MIDlet suite."/>
+    <target name="run-no-build" depends="init,pre-run,open-netmon,cldc-run,semc-run,savaje-run,sjmc-run,ojec-run,nokiaS80-run,cdc-hi-run,open-profiler" description="Quick Run already built MIDlet suite."/>
     <!--cldc-debug-->
     <target name="cldc-debug" if="cldc-platform.trigger">
         <parallel>
@@ -860,6 +920,35 @@
         </nbjpdastart>
     </target>
     <target name="semc-debug" depends="semc-debug-start,semc-build-j9-debug,semc-icon-assembly,semc-ppro-emulator,semc-do-run" if="semc-platform.trigger"/>
+    <!--savaje-debug-->
+    <target name="savaje-debug" if="savaje-platform.trigger">
+        <parallel>
+            <sunEmulatorExec home="${platform.home}" mainclass="${main.class}" args="${application.args}" jvmargs="${run.cmd.options}" device="${platform.device}" profile="${platform.profile}" xlet="${main.class.xlet}" applet="${main.class.applet}" debug="true" debuggeraddressproperty="jpda.port">
+                <fileset dir="${dist.dir}">
+                    <exclude name="javadoc/**"/>
+                </fileset>
+            </sunEmulatorExec>
+            <sequential>
+                <sleep seconds="5"/>
+                <antcall target="nbdebug"/>
+            </sequential>
+        </parallel>
+    </target>
+    <!--sjmc-debug-->
+    <target name="sjmc-debug" if="sjmc-platform.trigger">
+        <taskdef name="sjmcEmulatorExec" classname="org.netbeans.modules.j2me.cdc.project.sjmc.SJMCToolkitEmulatorExecTask" classpath="${libs.sjmc-ant-utils.classpath}"/>
+        <parallel>
+            <sjmcEmulatorExec home="${platform.home}" mainclass="${main.class}" args="${application.args}" jvmargs="${run.cmd.options}" device="${platform.device}" profile="${platform.profile}" xlet="${main.class.xlet}" applet="${main.class.applet}" debug="true" debuggeraddressproperty="jpda.port">
+                <fileset dir="${dist.dir}">
+                    <exclude name="javadoc/**"/>
+                </fileset>
+            </sjmcEmulatorExec>
+            <sequential>
+                <sleep seconds="1"/>
+                <antcall target="nbdebug"/>
+            </sequential>
+        </parallel>
+    </target>
     <!--ojec-debug-->
     <target name="ojec-debug" if="ojec-platform.trigger">
         <taskdef name="ojecEmulatorExec" classname="org.netbeans.modules.j2me.cdc.project.ojec.OJECToolkitEmulatorExecTask" classpath="${libs.ojec-ant-utils.classpath}"/>
@@ -875,6 +964,28 @@
             </sequential>
         </parallel>
     </target>
+    <!--cdc-hi-debug-->
+    <target name="-pre-cdc-hi-debug" if="cdc-hi-platform.trigger"/>
+    <target name="-cdc-hi-debug" if="cdc-hi-platform.trigger">
+        <taskdef name="freePortRetriever" classname="org.netbeans.modules.j2me.cdc.project.savaje.FreePortRetriever" classpath="${libs.savaje-ant-utils.classpath}"/>
+        <freePortRetriever debuggerPortProperty="active.debug.port"/>
+        <parallel>
+            <exec executable="${platform.home}/bin/emulator">
+                <arg value="-cp"/>
+                <arg value="${basedir}/${dist.dir}/${dist.jar}"/>
+                <arg value="-Xdevice:${platform.device}"/>
+                <arg value="-Xmain:${main.class}"/>
+                <arg value="-Xrunjdwp:transport=dt_socket,address=${active.debug.port},server=y,suspend=y"/>
+                <arg value="-Xdebug"/>
+            </exec>
+            <sequential>
+                <property name="debug.delay" value="500"/>
+                <nb-mobility-debug address="${active.debug.port}" name="${app.codename}" delay="${debug.delay}" timeout="${debug.timeout}" period="2000"/>
+            </sequential>
+        </parallel>
+    </target>
+    <target name="-post-cdc-hi-debug" if="cdc-hi-platform.trigger"/>
+    <target name="cdc-hi-debug" if="cdc-hi-platform.trigger" depends="-pre-cdc-hi-debug, -cdc-hi-debug, -post-cdc-hi-debug"/>
     <!--nokiaS80-debug-->
     <target name="nokiaS80-debug" if="nokiaS80-platform.trigger">
         <taskdef name="j9builder" classname="org.netbeans.modules.j2me.cdc.project.J9Builder" classpath="${libs.cdc-ant-utils.classpath}"/>
@@ -893,16 +1004,12 @@
             </sequential>
         </parallel>
     </target>
-    <!--nsicom-debug-->
-    <target name="nsicom-debug" if="nsicom-platform.trigger">
-        <fail message="Debugging is not supported in this NSIcom VM version. Use monitoring facility instead!"/>
-    </target>
     <!--debug-->
     <target name="remove-timestamp">
         <delete file="$/.timestamp"/>
     </target>
     <target name="pre-debug"/>
-    <target name="debug" description="Debug project." depends="clean,jar,remove-timestamp,pre-debug,cldc-debug,semc-debug,ojec-debug,nokiaS80-debug,nsicom-debug"/>
+    <target name="debug" description="Debug project." depends="clean,jar,remove-timestamp,pre-debug,cldc-debug,semc-debug,savaje-debug,sjmc-debug,ojec-debug,cdc-hi-debug,nokiaS80-debug"/>
     <target name="nbdebug" description="Start NetBeans debugger" if="netbeans.home">
         <property name="debug.delay" value="5000"/>
         <nb-mobility-debug address="${jpda.port}" name="${app.codename}" delay="${debug.delay}" timeout="${debug.timeout}" period="2000"/>
@@ -1005,6 +1112,15 @@
         <delete file="${platform.home}/epoc32/data/Z/Resource/Apps/PProLauncher${semc.application.uid}_loc.R01"/>
         <delete dir="${platform.home}/epoc32/winscw/C/private/${semc.application.uid}"/>
     </target>
+    <target name="clean-savaje" if="savaje-platform.trigger">
+        <delete dir="${build.dir}/jnlp"/>
+        <delete file="${dist.dir}/bundle.jnlp"/>
+        <delete file="${dist.dir}/bundle.policy"/>
+        <delete dir="${dist.dir}/lib"/>
+    </target>
+    <target name="clean-sjmc" if="sjmc-platform.trigger">
+        <delete dir="${dist.dir}/lib"/>
+    </target>
     <target name="clean-ojec" if="ojec-platform.trigger">
         <delete dir="${dist.dir}/lib"/>
     </target>
@@ -1060,7 +1176,7 @@
         <delete dir="build" quiet="true"/>
         <delete dir="dist" quiet="true"/>
     </target>
-    <target name="do-clean" depends="pre-clean,clean-timestamp,clean-preprocessed,clean-classes,clean-obfuscated,clean-preverified,clean-manifest,clean-jar,clean-jad,clean-javadoc,clean-j9,clean-semc,clean-ojec,-clean-default-configuration-root,-clean-configuration-root,-clean-completely,post-clean"/>
+    <target name="do-clean" depends="pre-clean,clean-timestamp,clean-preprocessed,clean-classes,clean-obfuscated,clean-preverified,clean-manifest,clean-jar,clean-jad,clean-javadoc,clean-j9,clean-semc,clean-savaje,clean-sjmc,clean-ojec,-clean-default-configuration-root,-clean-configuration-root,-clean-completely,post-clean"/>
     <target name="clean" depends="conditional-clean" if="no.clean.before.build" description="Clean build products.">
         <antcall target="do-clean" inheritall="true" inheritrefs="true"/>
     </target>
