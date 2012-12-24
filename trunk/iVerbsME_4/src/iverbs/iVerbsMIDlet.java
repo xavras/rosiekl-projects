@@ -879,6 +879,8 @@ public class iVerbsMIDlet extends MIDlet implements CommandListener {
             stats+=engine.getDoneListSize();
             g.drawString(stats, 5, (int)(getHeight()*0.8+5), Graphics.TOP | Graphics.LEFT);
             g.setFont(Font.getFont(fontFace, Font.STYLE_PLAIN, fontSize));
+            g.drawString("s"+g.getFont().getSize()+"f"+g.getFont().getFace()+"Ó"+(int)'Ó'+"ó"+(int)'ó', 
+                    5, (int)(getHeight()*0.6+5), Graphics.TOP | Graphics.LEFT);
         }
 
         public void commandAction(Command c, Displayable d) {

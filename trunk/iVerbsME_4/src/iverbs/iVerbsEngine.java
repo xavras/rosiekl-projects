@@ -29,6 +29,8 @@ public class iVerbsEngine /** @version 1.3 */
     
     public void loadFile(String path)
     {
+        clearArrays();
+        
         /* READING DATA FROM FILE */
         final int BUFSIZE = 1024;
         String str = "";
@@ -41,16 +43,15 @@ public class iVerbsEngine /** @version 1.3 */
             for(int chars = BUFSIZE; chars == BUFSIZE;)
             {
                 chars = is.read(bufor, 0, BUFSIZE);
-                str += new String(bufor, "UTF-16LE");
+                str += bytesToStringUTF16(bufor);
             }
             
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
-            str =  " >> " + ex.toString();
+            iVerbsMemo tmp = new iVerbsMemo("Exception while loading file", ex.toString());
+            currentList.addElement(tmp);
         }
-        
-        clearArrays();
         
         /* CREATE MEMOS FROM DATA */
         int pointer = 0;
@@ -167,5 +168,25 @@ public class iVerbsEngine /** @version 1.3 */
         if(currentList.isEmpty() && doneList.isEmpty() && rightList.isEmpty() && wrongList.isEmpty()) return false;
         else return true;
             
+    }
+    
+    public String bytesToStringUTF16(byte[] bytes)
+    {
+        String ret = "";
+        for(int i=0; i<bytes.length; i+=2)
+        {
+            int a = bytes[i+1];
+            if(a < 0)
+            {
+                a+=256;
+            }
+            int b = bytes[i];
+            if(b < 0)
+            {
+                b+=256;
+            }
+            ret += (char)(a*256+b);
+        }
+        return ret;
     }
 }
